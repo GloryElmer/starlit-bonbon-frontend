@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>台北崇耀堂 - 報到系統</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a1a1a;
+            --secondary: #ffffff;
+            --accent: #00b900;
+            --border: #e0e0e0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --bg: #f9f9f9;
+            --success: #34c759;
+            --danger: #ff3b30;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--secondary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--secondary);
+        }
+
+        .header {
+            background: var(--secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .header-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background: var(--bg);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 60px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 報到頁面 */
+        .checkin-page { padding: 16px; }
+
+        .event-list {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .event-item {
+            padding: 16px;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .event-item:active {
+            background: var(--bg);
+            transform: scale(0.98);
+        }
+
+        .event-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .event-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .checkin-card {
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .event-name {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .qr-code {
+            width: 160px;
+            height: 160px;
+            background: var(--bg);
+            border-radius: 12px;
+            margin: 16px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            overflow: hidden;
+        }
+
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .user-info {
+            margin: 16px 0;
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--secondary);
+        }
+
+        .btn-primary:active {
+            opacity: 0.8;
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:active {
+            background: var(--border);
+        }
+
+        /* 紀錄頁面 */
+        .records-page { padding: 16px; }
+
+        .record-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .record-item {
+            padding: 16px;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .record-info { flex: 1; }
+
+        .record-event {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .record-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .record-status {
+            font-size: 11px;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        /* 個人中心 */
+        .profile-page { padding: 16px; }
+
+        .profile-card {
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            background: var(--bg);
+            border-radius: 30px;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .stat-card {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* 導航欄 */
+        .navbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--secondary);
+            border-top: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            height: 50px;
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .nav-btn.active {
+            color: var(--text-primary);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        /* 儀表板 */
+        .dashboard-page { padding: 16px; }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .metric {
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .chart-container {
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        /* 錯誤訊息 */
+        .error-box {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .success-box {
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title" id="headerTitle">報到</div>
+            <button class="header-button" id="settingsBtn">⚙️</button>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <!-- 報到頁面 -->
+            <div class="page active" id="checkinPage">
+                <div id="eventSelector"></div>
+                <div id="checkinCard"></div>
+            </div>
+
+            <!-- 紀錄頁面 -->
+            <div class="page" id="recordsPage">
+                <div id="recordsList"></div>
+            </div>
+
+            <!-- 個人中心 -->
+            <div class="page" id="profilePage">
+                <div id="profileContent"></div>
+            </div>
+
+            <!-- 管理儀表板 -->
+            <div class="page" id="dashboardPage">
+                <div id="dashboardContent"></div>
+            </div>
+        </div>
+
+        <div class="navbar">
+            <button class="nav-btn active" data-page="checkin">
+                <div class="nav-icon">✓</div>
+                <div>報到</div>
+            </button>
+            <button class="nav-btn" data-page="records">
+                <div class="nav-icon">📋</div>
+                <div>紀錄</div>
+            </button>
+            <button class="nav-btn" data-page="profile">
+                <div class="nav-icon">👤</div>
+                <div>我</div>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 全局配置 ====================
+        const CONFIG = {
+            LIFF_ID: '2008854741-3uLGqzJ2',
+GAS_URL: 'https://script.google.com/macros/d/AKfycbwAzeGaW0tEL0ihSXicH7LzGop4FHVQ513cvsuMnSubFUKjZyKiZE3p0Y0DloK/usercontent',            // GAS_URL 需要替換為你的 Google Apps Script 部署 ID
+        };
+
+        // ==================== 狀態管理 ====================
+        const state = {
+            user: null,
+            selectedEvent: null,
+            records: [],
+            stats: {},
+            isLoading: false,
+        };
+
+        // ==================== 初始化 ====================
+        async function init() {
+            try {
+                // 初始化 LIFF
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+
+                // 獲取用户信息
+                const profile = await liff.getProfile();
+                state.user = {
+                    userId: profile.userId,
+                    displayName: profile.displayName,
+                    pictureUrl: profile.pictureUrl,
+                };
+
+                // 加載活動列表
+                await loadEvents();
+                attachEventListeners();
+
+            } catch (error) {
+                console.error('初始化失敗:', error);
+                showError('系統初始化失敗，請重新整理頁面');
+            }
+        }
+
+        // ==================== 活動管理 ====================
+        const MOCK_EVENTS = 
+
+
+
+
+
+開啟小結 (Command+Shift+E)
+翻譯網頁
+設定
