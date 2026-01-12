@@ -135,7 +135,7 @@
       try {
         const response = await fetch(`${CONFIG.GAS_URL}?action=getEvents`);
         const data = await response.json();
-        activeEvents = data.events || [];
+        activeEvents = data;
         console.log('已加載活動:', activeEvents);
       } catch (error) {
         console.error('加載事件失敗:', error);
